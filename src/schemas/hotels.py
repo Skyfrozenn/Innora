@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 
 class HotelsCreate(BaseModel):
     title: str = Field(..., min_length=3, max_length=100, description="Название отеля")
-    location: str = Field(..., min_length=5, max_length=150, description="Локация отеля")
+    location: str = Field(..., min_length=3, max_length=150, description="Локация отеля")
 
 
 class HotelsResponse(HotelsCreate):
@@ -16,7 +16,7 @@ class HotelsPut(HotelsCreate):
 
 class HotelsPatch(BaseModel):
     title: str | None = Field(None, min_length=3, max_length=100, description="Название отеля")
-    location: str | None = Field(None, min_length=5, max_length=150, description="Локация отеля")
+    location: str | None = Field(None, min_length=3, max_length=150, description="Локация отеля")
 
 
 class HotelsFilters(BaseModel):

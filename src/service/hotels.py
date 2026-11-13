@@ -1,8 +1,10 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from sqlalchemy.exc import IntegrityError
+
 from src.service.base import BaseService
 from src.repos.hotels import HotelsRepository
-from src.core.exception.hotels import HotelNotFound
+from src.core.exception.hotels import HotelNotFound, HotelAlreadyExists
 from src.schemas.hotels import (
     HotelsCreate,
     HotelsPatch,
@@ -27,7 +29,11 @@ class HotelService(BaseService):
 
     async def add_hotel(self, hotel_data: HotelsCreate) -> HotelsResponse:
         hotel = self.hotels_repo.add(hotel_data.model_dump())
-        await self.session.commit()
+        try:
+            await self.session.commit()
+        except IntegrityError:
+            await self.session.rollback()
+            raise HotelAlreadyExists(hotel_data.title)
         return self.schema.model_validate(hotel, from_attributes=True)
 
     async def get_hotels(self, hotels_filter: HotelsFilters) -> list[HotelsResponse]:
@@ -48,8 +54,11 @@ class HotelService(BaseService):
         new_hotel = hotel_data.model_dump()
         for k, v in new_hotel.items():
             setattr(hotel, k, v)
-
-        await self.session.commit()
+        try:
+            await self.session.commit()
+        except IntegrityError:
+            await self.session.rollback()
+            raise HotelAlreadyExists(hotel_data.title)
         return self.schema.model_validate(hotel, from_attributes=True)
 
     async def patch_hotel(
@@ -69,11 +78,19 @@ class HotelService(BaseService):
         if location := new_hotel.get("location"):
             hotel.location = location
 
-        await self.session.commit()
+        try:
+            await self.session.commit()
+        except IntegrityError:
+            await self.session.rollback()
+            raise HotelAlreadyExists(hotel_data.title)
+        
         return self.schema.model_validate(hotel, from_attributes=True)
 
     async def delete_hotel(self, hotel_id: int) -> None:
-        hotel = await self.get_hotel_by_id(id=hotel_id)
+        hotel = await self.hotels_repo.get_one_or_none(id=hotel_id)
+        if hotel is None:
+            raise HotelNotFound(hotel_id)
+        
        
         await self.session.delete(hotel)
         await self.session.commit()

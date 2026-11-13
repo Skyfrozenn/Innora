@@ -7,4 +7,4 @@ class RoomNotFound(AppError):
     def __init__(self, room_id: int):
         self.room_id = room_id
 
-        super().__init__(f"Комната с ID {room_id} не найдена")
+        super().__init__(f"Комната с ID {self.room_id} не найдена")
