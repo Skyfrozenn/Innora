@@ -3,6 +3,7 @@ from fastapi.openapi.docs import get_swagger_ui_html
 
 from src.api.routers.hotels import router as hotel_router
 from src.api.routers.rooms import router as room_router
+from src.api.routers.auth import router as auth_router
 
 from src.core.exception.base import AppError
 from src.api.erors_heandler import app_exception_handler
@@ -13,6 +14,7 @@ app.add_exception_handler(AppError, app_exception_handler)
 
 app.include_router(hotel_router)
 app.include_router(room_router)
+app.include_router(auth_router)
 
 
 @app.get("/docs", include_in_schema=False)

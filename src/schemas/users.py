@@ -1,10 +1,11 @@
+from datetime import datetime
+
 from pydantic import BaseModel, Field, field_validator
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
 class UserResponseСreate(BaseModel):
-    id: int
     name: str = Field(
         ...,
         min_length=4,
@@ -37,7 +38,12 @@ class UserResponse(BaseModel):
     id: int
     name: str
     email: EmailStr
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
 
 
-class UserWithHashedPassword(UserResponse):
-    hashed_password: str = Field(..., max_length=255)
+class UserWithHashedPassword(BaseModel):
+    name: str
+    email: EmailStr
+    hash_password: str = Field(..., max_length=255)
