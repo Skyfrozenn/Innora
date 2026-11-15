@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class RoomsCreate(BaseModel):
@@ -29,3 +29,10 @@ class RoomsPatch(BaseModel):
     description: str | None = Field(None, max_length=300, description="Описание комнаты")
     price: int | None = Field(None, gt=0, description="Цена комнаты")
     quantity: int | None = Field(None, ge=0, description="Количество комнат")
+
+    @model_validator(mode="after")
+    def check_not_null(self):
+        for field in self.model_fields_set:
+            if getattr(self, field) is None and field != "description":
+                raise ValueError(f"{field} cannot be null")
+        return self

@@ -72,25 +72,24 @@ class HotelService(BaseService):
 
         new_hotel = hotel_data.model_dump(exclude_unset=True)
 
-        if title := new_hotel.get("title"):
-            hotel.title = title
+        if "title" in new_hotel:
+            hotel.title = new_hotel["title"]
 
-        if location := new_hotel.get("location"):
-            hotel.location = location
+        if "location" in new_hotel:
+            hotel.location = new_hotel["location"]
 
         try:
             await self.session.commit()
         except IntegrityError:
             await self.session.rollback()
             raise HotelAlreadyExists(hotel_data.title)
-        
+
         return self.schema.model_validate(hotel, from_attributes=True)
 
     async def delete_hotel(self, hotel_id: int) -> None:
         hotel = await self.hotels_repo.get_one_or_none(id=hotel_id)
         if hotel is None:
             raise HotelNotFound(hotel_id)
-        
-       
+
         await self.session.delete(hotel)
         await self.session.commit()
