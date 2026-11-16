@@ -6,14 +6,15 @@ from src.service.base import BaseService
 
 from src.repos.users import UsersRepository
 
-from src.core.exception.users import UserAlreadyExists, UserNotFound
-
-from src.core.hash import hash_password
+from src.core.exception.users import UserAlreadyExists, UserNotFound, UserInvalidCredentials
+from src.core.hash import hash_password, verify_password
+from src.core.jwt import create_access_token, create_refresh_token
 
 from src.schemas.users import (
     UserResponse,
     UserResponseСreate,
-    UserWithHashedPassword
+    UserWithHashedPassword,
+    UserLogin
 )
 
 class UsersService(BaseService):
@@ -36,6 +37,22 @@ class UsersService(BaseService):
             await self.session.rollback()
             raise UserAlreadyExists(user_data.email)
         return UserResponse.model_validate(new_user, from_attributes=True)
-            
-        
-         
+
+    async def login_user(self, user_data: UserLogin) -> dict:
+        user = await self.users_repo.get_one_or_none(email = user_data.email)
+        if user is None:
+            raise UserInvalidCredentials()
+        is_password_valid = verify_password(user_data.password, user.hash_password)
+        if not is_password_valid:
+            raise UserInvalidCredentials()
+        access_token = create_access_token({"sub": str(user.id), "type": "access"})
+        refresh_token = create_refresh_token({"sub": str(user.id), "type": "refresh"})
+        user.is_active = True
+        await self.session.commit()
+        return {"access_token": access_token, "refresh_token": refresh_token}
+
+    async def get_user(self, user_id: int) -> UserResponse:
+        user = await self.users_repo.get_one_or_none(id = user_id)
+        if user is None:
+            raise UserNotFound(user_id)
+        return UserResponse.model_validate(user, from_attributes=True)

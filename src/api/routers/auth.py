@@ -1,8 +1,11 @@
-from fastapi import APIRouter, Body, Depends, status
+from fastapi import APIRouter, Body, Depends, status, Response, Request
 
 from src.service.users import UsersService
+
 from src.api.dependencies.service import get_user_service
-from src.schemas.users import UserResponse, UserResponseСreate
+from src.api.dependencies.token_validation import get_current_user
+
+from src.schemas.users import UserResponse, UserResponseСreate, UserLogin
 
 
 router = APIRouter(
@@ -55,3 +58,41 @@ async def register_user(
     users_service: UsersService = Depends(get_user_service),
 ) -> UserResponse:
     return await users_service.add_user(user_data)
+
+
+@router.post(
+    "/login",
+    summary="Аутентификация пользователя",
+    description="Аутентификация пользователя и генерация токенов"
+)
+async def login_user(
+    response: Response,
+    user_data: UserLogin,
+    user_service: UsersService = Depends(get_user_service)
+) -> dict:
+
+    tokens = await user_service.login_user(user_data)
+
+    access_token = tokens["access_token"]
+    refresh_token = tokens["refresh_token"]
+
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=False,
+        max_age=30 * 60
+    )
+
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=False,
+        max_age=7 * 24 * 60 * 60
+    )
+    return {"access_token": access_token, "refresh_token": refresh_token}
+
+@router.get("/me")
+async def me(current_user = Depends(get_current_user)):
+    return current_user

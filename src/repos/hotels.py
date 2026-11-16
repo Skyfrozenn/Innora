@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import select, desc
 
 from src.repos.base import BaseRepository
 from src.models.hotels import HotelsOrm
@@ -20,9 +20,12 @@ class HotelsRepository(BaseRepository):
         if location := hotels_pagination.get("location"):
             query = query.filter(HotelsOrm.location.ilike(f"%{location}%"))
 
-        query = query.limit(limit).offset((page - 1) * limit)
-
-        print(query.compile(compile_kwargs={"literal_binds": True}))
+        query = (
+            query
+            .order_by(desc("id"))
+            .limit(limit)
+            .offset((page - 1) * limit)
+        )
 
         result = await self.session.execute(query)
         hotels = result.scalars().all()

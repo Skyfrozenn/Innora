@@ -47,3 +47,8 @@ class UserWithHashedPassword(BaseModel):
     name: str
     email: EmailStr
     hash_password: str = Field(..., max_length=255)
+
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
