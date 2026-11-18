@@ -3,8 +3,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 
 from src.service.base import BaseService
+
 from src.repos.hotels import HotelsRepository
+
+from src.core.exception.permisions import PermissionDeniedException
 from src.core.exception.hotels import HotelNotFound, HotelAlreadyExists
+
+from src.core.enums import UsersRole
+
 from src.schemas.hotels import (
     HotelsCreate,
     HotelsPatch,
@@ -12,6 +18,8 @@ from src.schemas.hotels import (
     HotelsFilters,
     HotelsPut,
 )
+
+from src.schemas.users import UsersResponse
 
 
 class HotelService(BaseService):
@@ -27,13 +35,22 @@ class HotelService(BaseService):
             raise HotelNotFound(hotel_id)
         return self.schema.model_validate(hotel, from_attributes=True)
 
-    async def add_hotel(self, hotel_data: HotelsCreate) -> HotelsResponse:
-        hotel = self.hotels_repo.add(hotel_data.model_dump())
+    async def add_hotel(
+    self,
+    created_by_id: int,
+    hotel_data: HotelsCreate,
+) -> HotelsResponse:
+        hotel_data_dict = hotel_data.model_dump()
+        hotel_data_dict["created_by_id"] = created_by_id
+
+        hotel = self.hotels_repo.add(hotel_data_dict)
+
         try:
             await self.session.commit()
-        except IntegrityError:
+        except IntegrityError as error:
             await self.session.rollback()
             raise HotelAlreadyExists(hotel_data.title)
+
         return self.schema.model_validate(hotel, from_attributes=True)
 
     async def get_hotels(self, hotels_filter: HotelsFilters) -> list[HotelsResponse]:
@@ -45,11 +62,18 @@ class HotelService(BaseService):
     async def put_hotel(
         self,
         hotel_id: int,
+        current_user: UsersResponse,
         hotel_data: HotelsPut,
     ) -> HotelsResponse:
+
         hotel = await self.hotels_repo.get_one_or_none(id=hotel_id)
+
         if hotel is None:
             raise HotelNotFound(hotel_id)
+
+        if current_user.role == UsersRole.ADMIN:
+            if current_user.id != hotel.created_by_id:
+                raise PermissionDeniedException()
 
         new_hotel = hotel_data.model_dump()
         for k, v in new_hotel.items():
@@ -64,11 +88,18 @@ class HotelService(BaseService):
     async def patch_hotel(
         self,
         hotel_id: int,
+        current_user: UsersResponse,
         hotel_data: HotelsPatch,
     ) -> HotelsResponse:
+
         hotel = await self.hotels_repo.get_one_or_none(id=hotel_id)
+
         if hotel is None:
             raise HotelNotFound(hotel_id)
+
+        if current_user.role == UsersRole.ADMIN:
+            if current_user.id != hotel.created_by_id:
+                raise PermissionDeniedException()
 
         new_hotel = hotel_data.model_dump(exclude_unset=True)
 
@@ -86,10 +117,16 @@ class HotelService(BaseService):
 
         return self.schema.model_validate(hotel, from_attributes=True)
 
-    async def delete_hotel(self, hotel_id: int) -> None:
+    async def delete_hotel(self, current_user: UsersResponse , hotel_id: int) -> None:
+
         hotel = await self.hotels_repo.get_one_or_none(id=hotel_id)
+
         if hotel is None:
             raise HotelNotFound(hotel_id)
+        
+        if current_user.role == UsersRole.ADMIN:
+            if current_user.id != hotel.created_by_id:
+                raise PermissionDeniedException()
 
         await self.session.delete(hotel)
         await self.session.commit()

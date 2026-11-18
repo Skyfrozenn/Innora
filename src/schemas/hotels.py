@@ -8,6 +8,7 @@ class HotelsCreate(BaseModel):
 
 class HotelsResponse(HotelsCreate):
     id: int
+    created_by_id: int = Field(..., ge = 1, le=2147483647)
 
 
 class HotelsPut(HotelsCreate):

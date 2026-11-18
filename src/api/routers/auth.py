@@ -1,11 +1,12 @@
-from fastapi import APIRouter, Body, Depends, status, Response, Request
+from fastapi import APIRouter, Body, Depends, Path, status, Response, Request
 
 from src.service.users import UsersService
 
 from src.api.dependencies.service import get_user_service
 from src.api.dependencies.token_validation import get_current_user
+from src.api.dependencies.permissions import require_superuser
 
-from src.schemas.users import UserResponse, UserResponseСreate, UserLogin
+from src.schemas.users import UsersResponse, UsersResponseСreate, UsersLogin
 
 
 router = APIRouter(
@@ -24,7 +25,7 @@ router = APIRouter(
     ),
 )
 async def register_user(
-    user_data: UserResponseСreate = Body(
+    user_data: UsersResponseСreate = Body(
         openapi_examples={
             "standard": {
                 "summary": "Обычная регистрация",
@@ -45,18 +46,18 @@ async def register_user(
                 },
             },
             "admin": {
-                "summary": "Регистрация администратора",
+                "summary": "Регистрация покупателя",
                 "description": "Ещё один пример регистрации.",
                 "value": {
-                    "name": "Administrator",
-                    "email": "admin@example.com",
-                    "password": "SecureAdmin123#",
+                    "name": "Buyeristrator",
+                    "email": "buуer@example.com",
+                    "password": "buyerAdmin123#",
                 },
             },
         }
     ),
     users_service: UsersService = Depends(get_user_service),
-) -> UserResponse:
+) -> UsersResponse:
     return await users_service.add_user(user_data)
 
 
@@ -67,7 +68,7 @@ async def register_user(
 )
 async def login_user(
     response: Response,
-    user_data: UserLogin,
+    user_data: UsersLogin,
     user_service: UsersService = Depends(get_user_service)
 ) -> dict:
 
@@ -93,6 +94,24 @@ async def login_user(
     )
     return {"access_token": access_token, "refresh_token": refresh_token}
 
+
 @router.get("/me")
-async def me(current_user = Depends(get_current_user)):
+async def me(current_user = Depends(get_current_user)) -> UsersResponse:
     return current_user
+
+
+@router.patch("/{user_id}/assign-admin")
+async def assign_admin(
+    user_id: int = Path(ge=1, le=2147483647),
+    user_service : UsersService = Depends(get_user_service),
+    _ = Depends(require_superuser)
+) -> UsersResponse:
+    return await user_service.assign_admin(user_id)
+
+@router.patch("/{user_id}/revoke-admin")
+async def revoke_admin(
+    user_id: int = Path(ge=1, le=2147483647),
+    user_service : UsersService = Depends(get_user_service),
+    _ = Depends(require_superuser)
+) -> UsersResponse:
+    return await user_service.revoke_admin(user_id)

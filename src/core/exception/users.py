@@ -23,3 +23,10 @@ class UserInvalidCredentials(AppError):
 
     def __init__(self):
         super().__init__("Неверный email или пароль")
+
+
+class UserInactive(AppError):
+    status_code = 403
+
+    def __init__(self):
+        super().__init__("Аккаунт пользователя деактивирован")

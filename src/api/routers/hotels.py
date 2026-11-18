@@ -2,6 +2,7 @@ from fastapi import APIRouter, Body, Depends, Path
 
 from src.api.dependencies.service import get_hotel_service
 from src.api.dependencies.pagination import HotelsFiltersDep
+from src.api.dependencies.permissions import require_admin_or_superuser
 
 from src.service.hotels import HotelService
 
@@ -29,8 +30,8 @@ async def get_hotels(
     description="Получение отеля по ID"
 )
 async def get_hotel_by_id(
-    hotel_id: int,
-    hotel_service: HotelService = Depends(get_hotel_service)
+    hotel_id: int = Path(ge=1, le=2147483647),
+    hotel_service: HotelService = Depends(get_hotel_service),
 ) -> HotelsResponse:
     return await hotel_service.get_hotel_by_id(hotel_id)
 
@@ -43,9 +44,10 @@ async def get_hotel_by_id(
 )
 async def delete_hotel(
     hotel_id: int = Path(ge=1, le=2147483647),
+    current_user = Depends(require_admin_or_superuser),
     hotel_service: HotelService = Depends(get_hotel_service),
 ) -> None:
-    await hotel_service.delete_hotel(hotel_id)
+    await hotel_service.delete_hotel(current_user, hotel_id)
 
 
 @router.post(
@@ -95,9 +97,10 @@ async def new_hotel(
             },
         }
     ),
-    hotel_service: HotelService = Depends(get_hotel_service)
+    hotel_service: HotelService = Depends(get_hotel_service),
+    current_user = Depends(require_admin_or_superuser)
 ) -> HotelsResponse:
-    return await hotel_service.add_hotel(hotel_data)
+    return await hotel_service.add_hotel(current_user.id, hotel_data)
 
 
 @router.put(
@@ -107,11 +110,12 @@ async def new_hotel(
 )
 async def put_hotel(
     hotel_data: HotelsPut,
+    current_user = Depends(require_admin_or_superuser),
     hotel_id: int = Path(ge=1, le=2147483647),
     hotel_service: HotelService = Depends(get_hotel_service)
 ) -> HotelsResponse:
-    return await hotel_service.put_hotel(hotel_id, hotel_data)
-
+    return await hotel_service.put_hotel(hotel_id, current_user, hotel_data)
+     
 
 @router.patch(
     "/{hotel_id}",
@@ -120,7 +124,8 @@ async def put_hotel(
 )
 async def patch_hotel(
     hotel_data: HotelsPatch,
+    current_user = Depends(require_admin_or_superuser),
     hotel_id: int = Path(ge=1, le=2147483647),
     hotel_service: HotelService = Depends(get_hotel_service)
 ) -> HotelsResponse:
-    return await hotel_service.patch_hotel(hotel_id, hotel_data)
+    return await hotel_service.patch_hotel(hotel_id, current_user, hotel_data)

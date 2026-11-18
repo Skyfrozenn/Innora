@@ -4,8 +4,9 @@ from pydantic import BaseModel, Field, field_validator
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
+from src.core.enums import UsersRole
 
-class UserResponseСreate(BaseModel):
+class UsersResponseСreate(BaseModel):
     name: str = Field(
         ...,
         min_length=4,
@@ -34,21 +35,25 @@ class UserResponseСreate(BaseModel):
         return value
 
 
-class UserResponse(BaseModel):
+class UsersResponse(BaseModel):
     id: int
     name: str
     email: EmailStr
     is_active: bool
+    role: UsersRole
     created_at: datetime
     updated_at: datetime
 
 
-class UserWithHashedPassword(BaseModel):
+class UsersWithHashedPassword(BaseModel):
     name: str
     email: EmailStr
     hash_password: str = Field(..., max_length=255)
 
 
-class UserLogin(BaseModel):
+class UsersLogin(BaseModel):
     email: EmailStr
     password: str
+
+class UsersCreateSuperUser(UsersResponseСreate):
+    role: UsersRole = UsersRole.SUPERUSER

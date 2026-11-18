@@ -59,6 +59,11 @@ class RoomsService(BaseService):
     async def get_rooms(self, hotel_id: int) -> list[RoomsResponse]:
         rooms = await self.rooms_repo.get_all(hotel_id=hotel_id)
 
+        hotel = await self.hotels_repo.get_one_or_none(id= hotel_id)
+        
+        if hotel is None:
+            raise HotelNotFound(hotel_id)
+
         return [
             self.schema.model_validate(room, from_attributes=True) for room in rooms
         ]

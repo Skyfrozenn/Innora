@@ -7,7 +7,7 @@ from src.models.base import Base
 
 
 class BaseRepository:
-    model: type[Base] = None
+    model: type[Base]
 
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
@@ -19,7 +19,7 @@ class BaseRepository:
         result = await self.session.execute(query)
         return list(result.scalars().all())
 
-    async def get_one_or_none(self, **filter_data: Any) -> Base | None:
+    async def get_one_or_none(self, **filter_data) -> Base | None:
         query = select(self.model).filter_by(**filter_data)
         result = await self.session.execute(query)
         return result.scalars().one_or_none()
